@@ -1,36 +1,62 @@
 from flask import Flask, request
+import json
+import requests
 
 app = Flask(__name__)
 
-CONFIRM = "d06b1962"
+TOKEN = "PUT_YOUR_TOKEN_HERE"
+
+VK_API = "https://api.vk.com/method/messages.send"
+VK_VERSION = "5.131"
+
+BOT_TAG = "👁️ БензоГлаз ⛽"
+
+
+def send(peer_id, text):
+    r = requests.post(
+        VK_API,
+        data={
+            "peer_id": peer_id,
+            "message": f"{BOT_TAG}\n{text}",
+            "random_id": 0,
+            "access_token": TOKEN,
+            "v": VK_VERSION
+        }
+    )
+    print("VK RESPONSE:", r.text)
 
 
 @app.route("/", methods=["POST"])
 def main():
-    print("========== NEW REQUEST ==========")
-
-    print("HEADERS:", dict(request.headers))
-    print("METHOD:", request.method)
-
     raw = request.get_data(as_text=True)
-    print("RAW BODY:", raw)
 
-    try:
-        data = request.get_json(silent=True)
-        print("JSON PARSED:", data)
-    except Exception as e:
-        print("JSON ERROR:", e)
+    print("RAW:", raw)
 
-    if "confirmation" in raw:
-        return CONFIRM
+    data = json.loads(raw)
 
-    print("=================================")
+    print("EVENT:", data)
+
+    if data["type"] == "message_new":
+
+        obj = data["object"]["message"]
+
+        text = obj.get("text", "").lower()
+        peer_id = obj.get("peer_id")
+
+        print("TEXT:", text)
+        print("PEER:", peer_id)
+
+        if text == "start":
+            send(peer_id, "Система БензоГлаз активирована 👁️⛽")
+        else:
+            send(peer_id, "Выберите действие")
+
     return "ok"
 
 
 @app.route("/", methods=["GET"])
 def test():
-    return "BOT OK", 200
+    return "OK", 200
 
 
 if __name__ == "__main__":
