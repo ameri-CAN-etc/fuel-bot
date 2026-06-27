@@ -4,12 +4,17 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
+# 🔑 VK token (Render env)
 TOKEN = os.environ.get("TOKEN")
+
 VK_API = "https://api.vk.com/method/messages.send"
 VK_VERSION = "5.131"
 
-# 👁️⛽ БензоГлаз заправка
-BOT_NAME = "👁️ БензоГлаз ⛽"
+# 👁️⛽ бренд
+BOT_TAG = "👁️ БензоГлаз ⛽"
+
+# 🧠 защита от дублей (в памяти)
+seen = set()
 
 
 # 📤 отправка сообщений
@@ -22,7 +27,7 @@ def send(peer_id, text):
         VK_API,
         data={
             "peer_id": peer_id,
-            "message": f"{BOT_NAME}\n{text}",
+            "message": f"{BOT_TAG}\n{text}",
             "random_id": 0,
             "access_token": TOKEN,
             "v": VK_VERSION
@@ -30,7 +35,7 @@ def send(peer_id, text):
     )
 
 
-# 🌐 VK webhook
+# 🌐 webhook VK
 @app.route("/", methods=["POST"])
 def main():
     data = request.json
@@ -49,11 +54,14 @@ def main():
         if not obj:
             return "ok"
 
-        text = obj.get("text", "")
+        text = obj.get("text") or ""
         peer_id = obj.get("peer_id")
+        msg_id = obj.get("id")
 
-        if not text:
+        # 🧠 защита от дублей VK
+        if msg_id in seen:
             return "ok"
+        seen.add(msg_id)
 
         text = text.lower().strip()
 
@@ -63,13 +71,13 @@ def main():
 
         # ⛽ АЗС
         elif "азс" in text:
-            send(peer_id, "Список АЗС в разработке")
+            send(peer_id, "Список АЗС формируется")
 
-        # ✏️ сообщение
+        # ✏️ сообщения пользователей
         elif "сообщ" in text:
             send(peer_id, "Напишите: АЗС + топливо + статус")
 
-        # ❗ ничего лишнего НЕ отвечаем
+        # ❌ ничего лишнего не отвечаем
         else:
             return "ok"
 
