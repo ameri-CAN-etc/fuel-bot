@@ -8,8 +8,8 @@ TOKEN = os.environ.get("TOKEN")
 VK_API = "https://api.vk.com/method/messages.send"
 VK_VERSION = "5.131"
 
-# 🧠 защита от дублей (простая in-memory)
-seen = set()
+# 👁️⛽ БензоГлаз заправка
+BOT_NAME = "👁️ БензоГлаз ⛽"
 
 
 # 📤 отправка сообщений
@@ -22,7 +22,7 @@ def send(peer_id, text):
         VK_API,
         data={
             "peer_id": peer_id,
-            "message": text,
+            "message": f"{BOT_NAME}\n{text}",
             "random_id": 0,
             "access_token": TOKEN,
             "v": VK_VERSION
@@ -38,37 +38,45 @@ def main():
     if not data:
         return "ok"
 
-    # 🔑 подтверждение сервера
+    # 🔑 подтверждение сервера VK
     if data.get("type") == "confirmation":
         return "ca69504a"
 
+    # 💬 сообщения
     if data.get("type") == "message_new":
-        msg_id = data["object"]["message"]["id"]
+        obj = data["object"]["message"]
 
-        # 🧠 защита от повторов
-        if msg_id in seen:
+        if not obj:
             return "ok"
-        seen.add(msg_id)
 
-        msg = data["object"]["message"]["text"].lower()
-        peer_id = data["object"]["message"]["peer_id"]
+        text = obj.get("text", "")
+        peer_id = obj.get("peer_id")
 
-        if msg in ["начать", "start"]:
-            send(peer_id, "⛽ Топливо Радар запущен")
+        if not text:
+            return "ok"
 
-        elif msg == "📍 азс":
-            send(peer_id, "⛽ АЗС список пока формируется")
+        text = text.lower().strip()
 
-        elif msg == "✏️ сообщить":
+        # 🟢 старт
+        if text in ["начать", "start", "бензоглаз"]:
+            send(peer_id, "Система активирована")
+
+        # ⛽ АЗС
+        elif "азс" in text:
+            send(peer_id, "Список АЗС в разработке")
+
+        # ✏️ сообщение
+        elif "сообщ" in text:
             send(peer_id, "Напишите: АЗС + топливо + статус")
 
+        # ❗ ничего лишнего НЕ отвечаем
         else:
-            send(peer_id, "Команда не распознана")
+            return "ok"
 
     return "ok"
 
 
-# 🚀 запуск (Render)
+# 🚀 запуск Render
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
