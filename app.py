@@ -11,8 +11,6 @@ VK_VERSION = "5.131"
 
 BOT_TAG = "👁️ БензоГлаз ⛽"
 
-seen = set()
-
 
 def keyboard_main():
     return json.dumps({
@@ -48,47 +46,48 @@ def keyboard_main():
 
 
 def send(peer_id, text):
-    response = requests.post(
-        VK_API,
-        data={
-            "peer_id": peer_id,
-            "message": f"{BOT_TAG}\n{text}",
-            "keyboard": keyboard_main(),
-            "random_id": 0,
-            "access_token": TOKEN,
-            "v": VK_VERSION
-        }
-    )
+    try:
+        response = requests.post(
+            VK_API,
+            data={
+                "peer_id": peer_id,
+                "message": f"{BOT_TAG}\n{text}",
+                "keyboard": keyboard_main(),
+                "random_id": 0,
+                "access_token": TOKEN,
+                "v": VK_VERSION
+            },
+            timeout=10
+        )
 
-    print("VK RESPONSE:", response.text)
+        print("VK RESPONSE:", response.text)
+
+    except Exception as e:
+        print("SEND ERROR:", str(e))
 
 
 @app.route("/", methods=["POST"])
 def main():
     data = request.json
-
     print("VK EVENT:", data)
 
     if not data:
         return "ok"
 
+    # Подтверждение сервера VK
     if data.get("type") == "confirmation":
         return "ca69504a"
 
+    # Интересуют только новые сообщения
     if data.get("type") != "message_new":
         return "ok"
 
-    obj = data["object"]["message"]
-
-    msg_id = obj.get("id")
-    if msg_id in seen:
-        return "ok"
-    seen.add(msg_id)
+    obj = data.get("object", {}).get("message", {})
 
     peer_id = obj.get("peer_id")
     text = (obj.get("text") or "").lower().strip()
 
-    # Геолокация
+    # Пришла геолокация
     if obj.get("geo"):
         coords = obj["geo"].get("coordinates")
         send(
@@ -105,10 +104,10 @@ def main():
             peer_id,
             "Как пользоваться БензоГлаз:\n\n"
             "1️⃣ Нажмите «📍 Регион».\n"
-            "2️⃣ Выберите свой регион.\n"
+            "2️⃣ Выберите регион.\n"
             "3️⃣ Нажмите «⛽ АЗС рядом».\n"
             "4️⃣ Отправьте геолокацию.\n"
-            "5️⃣ Получите список ближайших АЗС."
+            "5️⃣ Получите список ближайших АЗС и статус топлива."
         )
         return "ok"
 
@@ -116,8 +115,8 @@ def main():
     if "регион" in text:
         send(
             peer_id,
-            "🌍 Выбор регионов находится в разработке.\n"
-            "Сначала запустим Тамбовскую область, затем всю Россию."
+            "🌍 Выбор регионов пока в разработке.\n"
+            "Сначала запускаем Тамбовскую область, затем всю Россию."
         )
         return "ok"
 
@@ -125,13 +124,16 @@ def main():
     if "азс рядом" in text:
         send(
             peer_id,
-            "📍 Отправьте геолокацию через кнопку «Скрепка → Местоположение», "
-            "и я покажу ближайшие АЗС."
+            "📍 Отправьте геолокацию через «Скрепка → Местоположение», и я подберу ближайшие АЗС."
         )
         return "ok"
 
     # Любое другое сообщение
-    send(peer_id, "Выберите действие с помощью кнопок ниже.")
+    send(
+        peer_id,
+        "Добро пожаловать в БензоГлаз.\nВыберите действие с помощью кнопок ниже."
+    )
+
     return "ok"
 
 
