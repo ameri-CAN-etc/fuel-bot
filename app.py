@@ -5,25 +5,30 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 app = Flask(__name__)
 
-# VK TOKEN из Render Environment Variables
-import os
+# 🔑 TOKEN из Render
+TOKEN = os.environ.get("TOKEN")
 
-TOKEN = os.environ.get("TOKEN", "")
+# ⚠️ защита от падения
+if not TOKEN:
+    print("❌ TOKEN not found in environment variables")
 
-vk_session = vk_api.VkApi(token=TOKEN)
-vk = vk_session.get_api()
+vk_session = vk_api.VkApi(token=TOKEN) if TOKEN else None
+vk = vk_session.get_api() if vk_session else None
 
-# 🧠 Главное меню
+
+# 🧠 клавиатура
 def menu():
     kb = VkKeyboard(one_time=False)
-
     kb.add_button("📍 АЗС", color=VkKeyboardColor.PRIMARY)
     kb.add_button("✏️ Сообщить", color=VkKeyboardColor.POSITIVE)
-
     return kb.get_keyboard()
 
-# 📤 отправка сообщений
+
 def send(user_id, text):
+    if not vk:
+        print("VK not initialized")
+        return
+
     vk.messages.send(
         user_id=user_id,
         message=text,
@@ -31,29 +36,30 @@ def send(user_id, text):
         random_id=0
     )
 
-# 🌐 Webhook (Render)
+
+# 🌐 webhook VK
 @app.route("/", methods=["POST"])
 def main():
     data = request.json
 
-    # 🔑 ПОДТВЕРЖДЕНИЕ VK СЕРВЕРА (ОБЯЗАТЕЛЬНО)
+    if not data:
+        return "ok"
+
+    # 🔑 подтверждение сервера VK
     if data.get("type") == "confirmation":
         return "ca69504a"
 
-    # 💬 ВХОДЯЩИЕ СООБЩЕНИЯ
+    # 💬 входящие сообщения
     if data.get("type") == "message_new":
         msg = data["object"]["message"]["text"].lower()
         user = data["object"]["message"]["from_id"]
 
-        # старт
         if msg in ["начать", "start"]:
             send(user, "⛽ Топливо Радар запущен")
 
-        # список АЗС (заглушка)
         elif msg == "📍 азс":
-            send(user, "Список АЗС пока в разработке ⛽")
+            send(user, "⛽ АЗС список в разработке")
 
-        # форма сообщения
         elif msg == "✏️ сообщить":
             send(user, "Напишите: АЗС + топливо + статус")
 
@@ -63,7 +69,7 @@ def main():
     return "ok"
 
 
-# 🚀 запуск сервера
+# 🚀 запуск сервера Render
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
