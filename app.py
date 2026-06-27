@@ -1,5 +1,4 @@
 from flask import Flask, request
-import json
 
 app = Flask(__name__)
 
@@ -8,30 +7,30 @@ CONFIRM = "d06b1962"
 
 @app.route("/", methods=["POST"])
 def main():
-    raw = request.get_data(as_text=True)
+    print("========== NEW REQUEST ==========")
 
-    print("RAW DATA:", raw)
+    print("HEADERS:", dict(request.headers))
+    print("METHOD:", request.method)
+
+    raw = request.get_data(as_text=True)
+    print("RAW BODY:", raw)
 
     try:
-        data = json.loads(raw)
+        data = request.get_json(silent=True)
+        print("JSON PARSED:", data)
     except Exception as e:
-        print("JSON PARSE ERROR:", e)
-        return "ok"
+        print("JSON ERROR:", e)
 
-    print("EVENT:", data)
-
-    if data.get("type") == "confirmation":
+    if "confirmation" in raw:
         return CONFIRM
 
-    if data.get("type") == "message_new":
-        print("MESSAGE RECEIVED")
-
+    print("=================================")
     return "ok"
 
 
 @app.route("/", methods=["GET"])
 def test():
-    return "OK BOT IS RUNNING", 200
+    return "BOT OK", 200
 
 
 if __name__ == "__main__":
