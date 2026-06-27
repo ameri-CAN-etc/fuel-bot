@@ -4,31 +4,33 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-# 🔑 TOKEN из Render
 TOKEN = os.environ.get("TOKEN")
+VK_API = "https://api.vk.com/method/messages.send"
+VK_VERSION = "5.131"
 
-VK_API_VERSION = "5.131"
+# 🧠 защита от дублей (простая in-memory)
+seen = set()
 
 
-# 📤 отправка сообщения через VK API (СТАБИЛЬНО)
+# 📤 отправка сообщений
 def send(peer_id, text):
     if not TOKEN:
-        print("NO TOKEN")
+        print("TOKEN NOT FOUND")
         return
 
     requests.post(
-        "https://api.vk.com/method/messages.send",
+        VK_API,
         data={
             "peer_id": peer_id,
             "message": text,
             "random_id": 0,
             "access_token": TOKEN,
-            "v": VK_API_VERSION
+            "v": VK_VERSION
         }
     )
 
 
-# 🌐 webhook VK
+# 🌐 VK webhook
 @app.route("/", methods=["POST"])
 def main():
     data = request.json
@@ -36,23 +38,28 @@ def main():
     if not data:
         return "ok"
 
-    # 🔑 подтверждение сервера VK
+    # 🔑 подтверждение сервера
     if data.get("type") == "confirmation":
         return "ca69504a"
 
-    # 💬 входящее сообщение
     if data.get("type") == "message_new":
-        obj = data["object"]["message"]
-        text = obj.get("text", "").lower()
-        peer_id = obj.get("peer_id")
+        msg_id = data["object"]["message"]["id"]
 
-        if text in ["начать", "start"]:
+        # 🧠 защита от повторов
+        if msg_id in seen:
+            return "ok"
+        seen.add(msg_id)
+
+        msg = data["object"]["message"]["text"].lower()
+        peer_id = data["object"]["message"]["peer_id"]
+
+        if msg in ["начать", "start"]:
             send(peer_id, "⛽ Топливо Радар запущен")
 
-        elif text == "📍 азс":
-            send(peer_id, "⛽ Список АЗС пока в разработке")
+        elif msg == "📍 азс":
+            send(peer_id, "⛽ АЗС список пока формируется")
 
-        elif text == "✏️ сообщить":
+        elif msg == "✏️ сообщить":
             send(peer_id, "Напишите: АЗС + топливо + статус")
 
         else:
@@ -61,7 +68,7 @@ def main():
     return "ok"
 
 
-# 🚀 запуск сервера Render
+# 🚀 запуск (Render)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
