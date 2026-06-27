@@ -1,5 +1,5 @@
 from flask import Flask, request
-import os
+import json
 
 app = Flask(__name__)
 
@@ -8,15 +8,23 @@ CONFIRM = "d06b1962"
 
 @app.route("/", methods=["POST"])
 def main():
-    data = request.json
+    raw = request.get_data(as_text=True)
 
-    print("EVENT RECEIVED:", data)
+    print("RAW DATA:", raw)
+
+    try:
+        data = json.loads(raw)
+    except Exception as e:
+        print("JSON PARSE ERROR:", e)
+        return "ok"
+
+    print("EVENT:", data)
 
     if data.get("type") == "confirmation":
         return CONFIRM
 
     if data.get("type") == "message_new":
-        print("MESSAGE OK")
+        print("MESSAGE RECEIVED")
 
     return "ok"
 
