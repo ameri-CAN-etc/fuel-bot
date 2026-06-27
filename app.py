@@ -45,7 +45,7 @@ def main():
 
     # 🔑 подтверждение сервера VK
     if data.get("type") == "confirmation":
-        return "ca69504a"
+        return "d06b1962"
 
     # 💬 сообщения
     if data.get("type") == "message_new":
