@@ -1,38 +1,30 @@
 import os
+import requests
 from flask import Flask, request
-import vk_api
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 app = Flask(__name__)
 
 # 🔑 TOKEN из Render
 TOKEN = os.environ.get("TOKEN")
 
-# ⚠️ защита от падения
-if not TOKEN:
-    print("❌ TOKEN not found in environment variables")
-
-vk_session = vk_api.VkApi(token=TOKEN) if TOKEN else None
-vk = vk_session.get_api() if vk_session else None
+VK_API_VERSION = "5.131"
 
 
-# 🧠 клавиатура
-def menu():
-    kb = VkKeyboard(one_time=False)
-    kb.add_button("📍 АЗС", color=VkKeyboardColor.PRIMARY)
-    kb.add_button("✏️ Сообщить", color=VkKeyboardColor.POSITIVE)
-    return kb.get_keyboard()
-
-
-def send(user_id, text):
-    if not vk:
+# 📤 отправка сообщения через VK API (СТАБИЛЬНО)
+def send(peer_id, text):
+    if not TOKEN:
+        print("NO TOKEN")
         return
 
-    vk.messages.send(
-        peer_id=user_id,
-        message=text,
-        keyboard=menu(),
-        random_id=0
+    requests.post(
+        "https://api.vk.com/method/messages.send",
+        data={
+            "peer_id": peer_id,
+            "message": text,
+            "random_id": 0,
+            "access_token": TOKEN,
+            "v": VK_API_VERSION
+        }
     )
 
 
@@ -48,22 +40,23 @@ def main():
     if data.get("type") == "confirmation":
         return "ca69504a"
 
-    # 💬 входящие сообщения
+    # 💬 входящее сообщение
     if data.get("type") == "message_new":
-        msg = data["object"]["message"]["text"].lower()
-        user = data["object"]["message"]["from_id"]
+        obj = data["object"]["message"]
+        text = obj.get("text", "").lower()
+        peer_id = obj.get("peer_id")
 
-        if msg in ["начать", "start"]:
-            send(user, "⛽ Топливо Радар запущен")
+        if text in ["начать", "start"]:
+            send(peer_id, "⛽ Топливо Радар запущен")
 
-        elif msg == "📍 азс":
-            send(user, "⛽ АЗС список в разработке")
+        elif text == "📍 азс":
+            send(peer_id, "⛽ Список АЗС пока в разработке")
 
-        elif msg == "✏️ сообщить":
-            send(user, "Напишите: АЗС + топливо + статус")
+        elif text == "✏️ сообщить":
+            send(peer_id, "Напишите: АЗС + топливо + статус")
 
         else:
-            send(user, "Команда не распознана")
+            send(peer_id, "Команда не распознана")
 
     return "ok"
 
