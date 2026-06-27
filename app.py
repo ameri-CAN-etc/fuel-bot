@@ -6,7 +6,9 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 app = Flask(__name__)
 
 # VK TOKEN из Render Environment Variables
-TOKEN = os.getenv("TOKEN")
+import os
+
+TOKEN = os.environ.get("TOKEN", "")
 
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
