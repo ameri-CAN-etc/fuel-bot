@@ -13,50 +13,68 @@ BOT_TAG = "👁️ БензоГлаз ⛽"
 
 
 def send(peer_id, text):
-    r = requests.post(
-        VK_API,
-        data={
-            "peer_id": peer_id,
-            "message": f"{BOT_TAG}\n{text}",
-            "random_id": 0,
-            "access_token": TOKEN,
-            "v": VK_VERSION
-        }
-    )
-    print("VK RESPONSE:", r.text)
+    try:
+        r = requests.post(
+            VK_API,
+            data={
+                "peer_id": peer_id,
+                "message": f"{BOT_TAG}\n{text}",
+                "random_id": 0,
+                "access_token": TOKEN,
+                "v": VK_VERSION
+            },
+            timeout=10
+        )
+        print("VK RESPONSE:", r.text)
+    except Exception as e:
+        print("SEND ERROR:", e)
 
 
 @app.route("/", methods=["POST"])
 def main():
     raw = request.get_data(as_text=True)
 
-    print("RAW:", raw)
+    print("========== RAW ==========")
+    print(raw)
 
-    data = json.loads(raw)
+    if not raw:
+        print("EMPTY REQUEST")
+        return "ok"
 
-    print("EVENT:", data)
+    try:
+        data = json.loads(raw)
+    except Exception as e:
+        print("JSON ERROR:", e)
+        return "ok"
 
-    if data["type"] == "message_new":
+    print("========== EVENT ==========")
+    print(data)
 
-        obj = data["object"]["message"]
+    if data.get("type") != "message_new":
+        return "ok"
 
-        text = obj.get("text", "").lower()
-        peer_id = obj.get("peer_id")
+    obj = data.get("object", {}).get("message", {})
 
-        print("TEXT:", text)
-        print("PEER:", peer_id)
+    text = (obj.get("text") or "").lower()
+    peer_id = obj.get("peer_id")
 
-        if text == "start":
-            send(peer_id, "Система БензоГлаз активирована 👁️⛽")
-        else:
-            send(peer_id, "Выберите действие")
+    print("TEXT:", text)
+    print("PEER:", peer_id)
+
+    if not peer_id:
+        return "ok"
+
+    if text == "start":
+        send(peer_id, "Система БензоГлаз активирована 👁️⛽")
+    else:
+        send(peer_id, "Выберите действие")
 
     return "ok"
 
 
 @app.route("/", methods=["GET"])
 def test():
-    return "OK", 200
+    return "OK BOT", 200
 
 
 if __name__ == "__main__":
