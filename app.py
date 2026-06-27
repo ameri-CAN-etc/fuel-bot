@@ -26,11 +26,10 @@ def menu():
 
 def send(user_id, text):
     if not vk:
-        print("VK not initialized")
         return
 
     vk.messages.send(
-        user_id=user_id,
+        peer_id=user_id,
         message=text,
         keyboard=menu(),
         random_id=0
