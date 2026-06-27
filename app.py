@@ -1,3 +1,12 @@
+@app.route("/", methods=["POST"])
+def main():
+    data = request.json
+
+    # 🔑 ПОДТВЕРЖДЕНИЕ VK
+    if data.get("type") == "confirmation":
+        return "ca69504a"
+
+
 import os
 from flask import Flask, request
 import vk_api
